@@ -1,0 +1,9 @@
+{
+  "schema_version": "1",
+  "stage": "convert",
+  "job_id": "example-convert",
+  "artifacts_dir": "artifacts",
+  "source": "artifacts/example-lora",
+  "output": "artifacts/example-lora/model-f16.gguf",
+  "outtype": "f16"
+}
