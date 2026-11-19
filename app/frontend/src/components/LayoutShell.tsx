@@ -1,192 +1,129 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, type CSSProperties, type ReactNode } from 'react'
 import { Window } from '@wailsio/runtime'
 import {
-  ArrowRight, Boxes, ChartNoAxesColumnIncreasing, Check, ChevronDown,
-  CircleHelp, Copy, Database, FilePlus2, FlaskConical, FolderOpen,
-  LayoutDashboard, Minus, PanelLeftClose, PanelLeftOpen, Pencil, Plus,
-  Settings, Square, Trash2, X, Play,
+  BarChart3, Boxes, CircleHelp, Database, FlaskConical,
+  LayoutDashboard, PanelLeftClose, PanelLeftOpen, Plus, Settings, X,
 } from 'lucide-react'
-import { appConfig, type View, workflowOptions } from '../config'
+import { appConfig, type View } from '../config'
 import { useAppDispatch, useAppSelector } from '../hooks'
-import {
-  closeWorkspaceDialog, closeWorkspaceMenu, createWorkspace,
-  deleteActiveWorkspace, openWorkspaceDialog, renameWorkspace,
-  setMaximized, setNewExperimentOpen, setSidebarResizing, setSidebarWidth,
-  setView, setWorkspaceName, switchWorkspace, toggleSidebar, toggleWorkspaceMenu,
-} from '../store'
+import { setMaximized, setNewExperimentOpen, setSidebarResizing, setSidebarWidth, setView, toggleSidebar } from '../store'
 
-const navigationIcons = {
+const icons = {
   overview: LayoutDashboard,
   models: Boxes,
   datasets: Database,
   experiments: FlaskConical,
-  results: ChartNoAxesColumnIncreasing,
+  results: BarChart3,
 }
 
 export function LayoutShell({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
-  const ui = useAppSelector((state) => state.ui)
-  const workspaceState = useAppSelector((state) => state.workspaces)
-  const activeWorkspace = workspaceState.items.find((workspace) => workspace.id === workspaceState.activeId) || workspaceState.items[0]
-
-  useEffect(() => {
-    if (!ui.sidebarResizing) return
-    const handlePointerMove = (event: PointerEvent) => {
-      const maximum = Math.floor(window.innerWidth / 3)
-      dispatch(setSidebarWidth(Math.min(maximum, Math.max(220, event.clientX))))
-    }
-    const stopResizing = () => dispatch(setSidebarResizing(false))
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', stopResizing)
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', stopResizing)
-    }
-  }, [dispatch, ui.sidebarResizing])
+  const view = useAppSelector((state) => state.ui.view)
+  const newExperimentOpen = useAppSelector((state) => state.ui.newExperimentOpen)
+  const sidebarCollapsed = useAppSelector((state) => state.ui.sidebarCollapsed)
+  const sidebarWidth = useAppSelector((state) => state.ui.sidebarWidth)
+  const sidebarResizing = useAppSelector((state) => state.ui.sidebarResizing)
+  const maximised = useAppSelector((state) => state.ui.maximised)
 
   const toggleMaximise = async () => {
     await Window.ToggleMaximise()
     dispatch(setMaximized(await Window.IsMaximised()))
   }
 
-  const openDialog = (dialog: 'create' | 'rename' | 'delete') => {
-    dispatch(setWorkspaceName(dialog === 'rename' ? activeWorkspace?.name || '' : ''))
-    dispatch(openWorkspaceDialog(dialog))
-  }
-
-  const submitWorkspaceDialog = () => {
-    if (ui.workspaceDialog === 'create') {
-      const name = ui.workspaceName.trim()
-      if (!name) return
-      const id = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'workspace'}-${Date.now()}`
-      dispatch(createWorkspace({ id, name }))
-    } else if (ui.workspaceDialog === 'rename') {
-      const name = ui.workspaceName.trim()
-      if (name) dispatch(renameWorkspace(name))
-    } else if (ui.workspaceDialog === 'delete') {
-      dispatch(deleteActiveWorkspace())
+  useEffect(() => {
+    if (!sidebarResizing) return
+    const resize = (event: PointerEvent) => {
+      dispatch(setSidebarWidth(Math.min(300, Math.max(160, event.clientX - 12))))
     }
-    dispatch(closeWorkspaceDialog())
-  }
+    const stop = () => dispatch(setSidebarResizing(false))
+    window.addEventListener('pointermove', resize)
+    window.addEventListener('pointerup', stop)
+    return () => {
+      window.removeEventListener('pointermove', resize)
+      window.removeEventListener('pointerup', stop)
+    }
+  }, [dispatch, sidebarResizing])
 
-  const shellStyle = ui.sidebarCollapsed
-    ? undefined
-    : { gridTemplateColumns: `${ui.sidebarWidth}px minmax(0, 1fr)` }
+  const contentColumns = sidebarCollapsed ? '72px 1fr' : `${sidebarWidth}px 1fr`
 
   return (
-    <div className={`workbench-shell ${ui.sidebarCollapsed ? 'sidebar-collapsed' : ''} ${ui.sidebarResizing ? 'resizing-sidebar' : ''}`} style={shellStyle}>
-      <header className="window-titlebar">
-        <div className="window-title">
-          <span className="window-app-icon"><Boxes size={14} strokeWidth={1.8} /></span>
-          <span>{appConfig.title}</span>
-        </div>
-        <div className="window-controls" aria-label="Window controls">
-          <button className="window-control minimize" aria-label="Minimize" onClick={() => Window.Minimise()}><Minus size={16} strokeWidth={2} /></button>
-          <button className="window-control maximize" aria-label={ui.maximised ? 'Restore' : 'Maximize'} onClick={toggleMaximise}>{ui.maximised ? <Copy size={13} strokeWidth={1.8} /> : <Square size={13} strokeWidth={1.8} />}</button>
-          <button className="window-control close" aria-label="Close" onClick={() => Window.Close()}><X size={17} strokeWidth={2} /></button>
-        </div>
-      </header>
+    <div className="h-screen min-h-[720px] min-w-[980px] overflow-hidden bg-[#eef0f4] p-[10px] text-[#25283a]">
+      <div className="grid h-full w-full grid-rows-[44px_1fr] overflow-hidden rounded-[24px] border border-[#d9dde6] bg-[#f7f8fa] shadow-[0_24px_70px_rgba(37,40,58,.16),0_2px_0_rgba(255,255,255,.95)_inset,0_-1px_0_rgba(37,40,58,.04)_inset]">
+        <header className="flex h-[44px] items-center justify-between border-b border-[#dfe3eb] bg-[linear-gradient(180deg,#fff,#f7f8fa)] px-5 py-1.5 shadow-[0_1px_0_rgba(255,255,255,.95)_inset,0_-1px_0_rgba(37,40,58,.03)_inset]" style={{ WebkitAppRegion: 'drag' } as CSSProperties}>
+          <div className="flex items-center gap-3 font-bold">
+            <div className="grid size-8 place-items-center rounded-[10px] bg-[#25283a] shadow-[0_4px_10px_rgba(37,40,58,.16),0_1px_0_rgba(255,255,255,.12)_inset]"><Boxes size={18} className="text-white" /></div>
+            <span className="text-[15px] font-bold tracking-[.01em]">{appConfig.title}</span>
+          </div>
+          <div className="flex items-center gap-0.5 pr-1" style={{ WebkitAppRegion: 'no-drag' } as CSSProperties}>
+            <button title="Minimize" onClick={() => Window.Minimise()} className="grid size-10 place-items-center text-[#969dac] hover:bg-[#f1f3f6]"><span className="mb-1 h-[2px] w-4 bg-current" /></button>
+            <button title={maximised ? 'Restore' : 'Maximize'} onClick={toggleMaximise} className="grid size-10 place-items-center text-[#969dac] hover:bg-[#f1f3f6]"><span className="size-4 rounded-[3px] border-2 border-current" /></button>
+            <button title="Close" onClick={() => Window.Close()} className="grid size-10 place-items-center text-[#969dac] hover:bg-[#f1f3f6] hover:text-[#d95a60]"><X size={19} strokeWidth={2} /></button>
+          </div>
+        </header>
 
-      <aside className="sidebar">
-        {!ui.sidebarCollapsed && (
-          <div className="sidebar-resize-handle" role="separator" aria-orientation="vertical" aria-label="Resize sidebar" onPointerDown={(event) => { event.preventDefault(); dispatch(setSidebarResizing(true)) }} />
-        )}
-        <div className="brand-lockup">
-          <div className="brand-symbol"><Boxes size={20} strokeWidth={1.8} /></div>
-          <div className="brand-copy"><strong>{appConfig.title}</strong><span>{appConfig.subtitle}</span></div>
-          <button className="sidebar-toggle" aria-label={ui.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'} onClick={() => dispatch(toggleSidebar())}>{ui.sidebarCollapsed ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}</button>
-        </div>
+        <div className={`grid min-h-0 ${sidebarResizing ? 'select-none' : ''}`} style={{ gridTemplateColumns: contentColumns }}>
+          <aside className="relative flex min-h-0 flex-col items-center border-r border-[#dfe3eb] bg-[linear-gradient(90deg,#fff,#f8f9fb)] py-5 shadow-[1px_0_0_rgba(255,255,255,.9)_inset,6px_0_18px_rgba(37,40,58,.025)]">
+            {!sidebarResizing && <div className="mb-8 h-px" />}
+            {!sidebarCollapsed && (
+              <button
+                onPointerDown={(event) => { event.preventDefault(); dispatch(setSidebarResizing(true)) }}
+                title="Drag to resize sidebar"
+                className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-[#25283a]/10"
+                aria-label="Resize sidebar"
+              />
+            )}
+            <nav className={`flex w-full flex-col gap-2 ${sidebarCollapsed ? 'items-center' : 'px-3'}`} aria-label="Main navigation">
+              {appConfig.navigation.map((item) => {
+                const Icon = icons[item.id as View]
+                const active = view === item.id
+                return (
+                  <button
+                    key={item.id}
+                    title={item.label}
+                    onClick={() => dispatch(setView(item.id as View))}
+                    className={`flex items-center rounded-2xl transition ${sidebarCollapsed ? 'size-12 justify-center' : 'h-12 w-full gap-3 px-3'} ${active ? 'bg-[#f1f3f6] text-[#25283a] shadow-[0_6px_18px_rgba(37,40,58,.07)]' : 'text-[#aab1c1] hover:bg-[#f6f7f9] hover:text-[#697187]'}`}
+                  >
+                    <Icon size={20} strokeWidth={1.8} />
+                    {!sidebarCollapsed && <span className="text-[12px] font-bold">{item.label}</span>}
+                    {!sidebarCollapsed && 'count' in item && <span className="ml-auto rounded-full bg-[#25283a] px-2 py-0.5 text-[8px] text-white">{item.count}</span>}
+                  </button>
+                )
+              })}
+            </nav>
+            <button
+              onClick={() => dispatch(toggleSidebar())}
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className={`absolute top-5 ${sidebarCollapsed ? '-right-4' : 'right-3'} z-10 grid size-8 place-items-center rounded-full border border-[#edf0f4] bg-white text-[#aab1c1] shadow-[0_5px_16px_rgba(37,40,58,.10)]`}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+            </button>
+            <div className={`mt-auto flex flex-col gap-2 ${sidebarCollapsed ? 'items-center' : 'w-full px-3'}`}>
+              <button title="Settings" className={`${sidebarCollapsed ? 'grid size-12 place-items-center' : 'flex h-12 w-full items-center gap-3 px-3'} rounded-2xl text-[#b4bac8] hover:bg-[#f3f5f8]`}><Settings size={20} strokeWidth={1.7} />{!sidebarCollapsed && <span className="text-[12px] font-bold">Settings</span>}</button>
+              <button title="Help" className={`${sidebarCollapsed ? 'grid size-12 place-items-center' : 'flex h-12 w-full items-center gap-3 px-3'} rounded-2xl text-[#b4bac8] hover:bg-[#f3f5f8]`}><CircleHelp size={20} strokeWidth={1.7} />{!sidebarCollapsed && <span className="text-[12px] font-bold">Help</span>}</button>
+            </div>
+          </aside>
 
-        <div className="workspace-switcher">
-          <button className="workspace-picker" onClick={() => dispatch(toggleWorkspaceMenu())} aria-expanded={ui.workspaceMenuOpen}>
-            <div className="workspace-copy"><small>{appConfig.workspace.label}</small><strong>{activeWorkspace?.name || 'No workspace'}</strong></div>
-            <ChevronDown className="chevron" size={16} strokeWidth={1.8} />
-          </button>
-          {ui.workspaceMenuOpen && (
-            <div className="workspace-menu">
-              <div className="workspace-menu-heading">WORKSPACES</div>
-              {workspaceState.items.map((workspace) => (
-                <button key={workspace.id} className={`workspace-menu-item ${workspace.id === activeWorkspace?.id ? 'active' : ''}`} onClick={() => { dispatch(switchWorkspace(workspace.id)); dispatch(closeWorkspaceMenu()) }}>
-                  <span>{workspace.name}</span>{workspace.id === activeWorkspace?.id && <Check size={14} />}
-                </button>
-              ))}
-              <div className="workspace-menu-actions">
-                <button onClick={() => openDialog('create')}><Plus size={14} /> New</button>
-                <button onClick={() => openDialog('rename')}><Pencil size={14} /> Rename</button>
-                <button onClick={() => openDialog('delete')} disabled={workspaceState.items.length <= 1}><Trash2 size={14} /> Delete</button>
+          <main className="min-w-0 overflow-y-auto px-6 py-7 2xl:px-10">
+            {children}
+          </main>
+        </div>
+        {newExperimentOpen && (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-[#25283a]/20 backdrop-blur-sm" onClick={() => dispatch(setNewExperimentOpen(false))}>
+            <div className="w-[440px] rounded-[24px] bg-white p-6 shadow-[0_24px_70px_rgba(34,39,56,.20)]" onClick={(event) => event.stopPropagation()}>
+              <div className="mb-6 flex items-start justify-between">
+                <div><p className="text-[9px] font-bold uppercase tracking-[.14em] text-[#abb2c1]">New workflow</p><h2 className="mt-1 text-[16px] font-bold">Create experiment</h2></div>
+                <button title="Close" onClick={() => dispatch(setNewExperimentOpen(false))} className="grid size-8 place-items-center rounded-full text-[#abb2c1] hover:bg-[#f3f5f7]"><X size={16} /></button>
+              </div>
+              <label className="block text-[10px] font-bold">Experiment name<input className="mt-2 h-11 w-full rounded-xl border border-[#edf0f4] px-3 text-[11px] outline-none focus:border-[#aab1c1]" defaultValue="Wound triage · Q4 vs Q8" /></label>
+              <label className="mt-4 block text-[10px] font-bold">Base model<select className="mt-2 h-11 w-full rounded-xl border border-[#edf0f4] px-3 text-[11px] outline-none"><option>{appConfig.model.name}</option></select></label>
+              <div className="mt-6 flex justify-end gap-2">
+                <button onClick={() => dispatch(setNewExperimentOpen(false))} className="h-10 rounded-full px-4 text-[10px] font-bold">Cancel</button>
+                <button onClick={() => { dispatch(setNewExperimentOpen(false)); dispatch(setView('experiments')) }} className="flex h-10 items-center gap-2 rounded-full bg-[#25283a] px-5 text-[10px] font-bold text-white"><Plus size={14} /> Create experiment</button>
               </div>
             </div>
-          )}
-        </div>
-
-        <nav className="main-nav" aria-label="Main navigation">
-          <p className="nav-label">PROJECT</p>
-          {appConfig.navigation.map((item) => {
-            const Icon = navigationIcons[item.id as View]
-            return (
-              <button className={`nav-item ${ui.view === item.id ? 'active' : ''}`} key={item.id} onClick={() => dispatch(setView(item.id as View))}>
-                <span className="nav-icon"><Icon size={17} strokeWidth={1.8} /></span>
-                <span className="nav-text">{item.label}</span>
-                {'count' in item && <span className="nav-count">{item.count}</span>}
-              </button>
-            )
-          })}
-          <p className="nav-label nav-label-spaced">TOOLS</p>
-          {appConfig.tools.map((tool) => {
-            const ToolIcon = tool.label === 'Settings' ? Settings : CircleHelp
-            return <button className="nav-item" key={tool.label}><span className="nav-icon"><ToolIcon size={17} strokeWidth={1.8} /></span><span className="nav-text">{tool.label}</span></button>
-          })}
-        </nav>
-
-        <div className="sidebar-footer"><div className="runtime-card"><div className="runtime-header">{appConfig.runtime.status}</div><span>{appConfig.runtime.engine}</span><small>{appConfig.runtime.capabilities}</small></div></div>
-      </aside>
-
-      <main className="main-content">
-        <header className="topbar">
-          <div className="classic-toolbar">
-            <button className="tool-button" title="New experiment"><FilePlus2 size={16} strokeWidth={1.8} /></button>
-            <button className="tool-button" title="Open project"><FolderOpen size={16} strokeWidth={1.8} /></button>
-            <span className="toolbar-separator" />
-            <button className="tool-button" title="Run"><Play size={15} strokeWidth={1.8} /></button>
-            <button className="tool-button" title="Stop"><Square size={14} strokeWidth={1.8} /></button>
-            <span className="toolbar-separator" />
-            <span className="breadcrumbs"><span>Project</span><b>›</b><strong>{appConfig.navigation.find((item) => item.id === ui.view)?.label}</strong></span>
           </div>
-          <div className="top-actions"><span className="toolbar-status">Ready</span><button className="outline-button" onClick={() => dispatch(setNewExperimentOpen(true))}>New experiment</button></div>
-        </header>
-        {children}
-      </main>
-
-      {ui.newExperimentOpen && (
-        <div className="modal-backdrop" onClick={() => dispatch(setNewExperimentOpen(false))}>
-          <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-heading"><div><small>NEW WORKFLOW</small><h2>Create experiment</h2></div><button className="close-button" onClick={() => dispatch(setNewExperimentOpen(false))}><X size={17} /></button></div>
-            <label>Experiment name<input defaultValue={`${activeWorkspace?.name || 'Workspace'} · Q4 vs Q8`} /></label>
-            <label>Base model<select defaultValue="qwen"><option value="qwen">{appConfig.model.name}</option><option>Import another model…</option></select></label>
-            <label>Workflow<select defaultValue={workflowOptions[0].value}>{workflowOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-            <div className="modal-actions"><button className="text-button" onClick={() => dispatch(setNewExperimentOpen(false))}>Cancel</button><button className="primary-button" onClick={() => { dispatch(setNewExperimentOpen(false)); dispatch(setView('experiments')) }}>Create experiment <ArrowRight size={15} /></button></div>
-          </div>
-        </div>
-      )}
-
-      {ui.workspaceDialog && (
-        <div className="modal-backdrop" onClick={() => dispatch(closeWorkspaceDialog())}>
-          <div className="modal workspace-dialog" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-heading"><div><small>WORKSPACE</small><h2>{ui.workspaceDialog === 'create' ? 'Create workspace' : ui.workspaceDialog === 'rename' ? 'Rename workspace' : 'Delete workspace'}</h2></div><button className="close-button" onClick={() => dispatch(closeWorkspaceDialog())}><X size={17} /></button></div>
-            {ui.workspaceDialog === 'delete' ? (
-              <p className="workspace-delete-copy">Delete <strong>{activeWorkspace?.name}</strong>? This removes the workspace from this app.</p>
-            ) : (
-              <label>Workspace name<input autoFocus value={ui.workspaceName} onChange={(event) => dispatch(setWorkspaceName(event.target.value))} onKeyDown={(event) => { if (event.key === 'Enter') submitWorkspaceDialog() }} /></label>
-            )}
-            <div className="modal-actions">
-              <button className="text-button" onClick={() => dispatch(closeWorkspaceDialog())}>Cancel</button>
-              <button className={ui.workspaceDialog === 'delete' ? 'primary-button danger-button' : 'primary-button'} onClick={submitWorkspaceDialog} disabled={ui.workspaceDialog !== 'delete' && !ui.workspaceName.trim()}>
-                {ui.workspaceDialog === 'create' ? <><Plus size={15} /> Create</> : ui.workspaceDialog === 'rename' ? <><Pencil size={15} /> Rename</> : <><Trash2 size={15} /> Delete</>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

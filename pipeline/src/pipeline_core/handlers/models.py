@@ -15,12 +15,9 @@ def handle_search(job_id: str, config: Dict[str, Any], emit_fn: Callable) -> Non
         progress=0.1,
         message=f"Searching Hugging Face Hub for '{query}'...",
     )
-
+    # Hugging face API. 
     api = HfApi()
-    models = api.list_models(
-        search=query, sort="downloads", direction=-1, limit=limit, full=True
-    )
-
+    models = api.list_models( search=query, sort="downloads", limit=limit, full=True)
     results = [
         {
             "repo_id": m.id,
@@ -33,12 +30,14 @@ def handle_search(job_id: str, config: Dict[str, Any], emit_fn: Callable) -> Non
     ]
 
     emit_fn("search_results", job_id, models=results)
-    emit_fn(
-        "complete", job_id, status="success", message=f"Found {len(results)} models."
-    )
+    emit_fn( "complete", job_id, status="success", message=f"Found {len(results)} models." )
 
 
 def handle_download(job_id: str, config: Dict[str, Any], emit_fn: Callable) -> None:
+    """
+    Helper for handling downloads from hugging face. Model specific data is provided when downloading
+    from huggingface. The haggingface_hub export methods to download models
+    """
     repo_id = config.get("repo_id")
     save_dir = config.get("save_dir", "artifacts/models")
 
@@ -51,10 +50,12 @@ def handle_download(job_id: str, config: Dict[str, Any], emit_fn: Callable) -> N
     target_path = os.path.join(save_dir, repo_id.replace("/", "_"))
 
     downloaded_path = snapshot_download(
-        repo_id=repo_id,
-        local_dir=target_path,
-        local_dir_use_symlinks=False,
-        resume_download=True,
+      repo_id=repo_id,
+      local_dir=target_path,
+        # repo_id=repo_id,
+        # local_dir=target_path,
+        # local_dir_use_symlinks=False,
+        # resume_download=True,
     )
 
     emit_fn("artifact", job_id, path=downloaded_path, artifact_type="model_checkpoint")
