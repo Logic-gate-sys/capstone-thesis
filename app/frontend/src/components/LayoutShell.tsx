@@ -1,12 +1,11 @@
 import { useEffect, type CSSProperties, type ReactNode } from 'react'
 import { Window } from '@wailsio/runtime'
 import {
-  BarChart3, Boxes, CircleHelp, Database, FlaskConical,
-  LayoutDashboard, PanelLeftClose, PanelLeftOpen, Plus, Settings, X,
-} from 'lucide-react'
+  BarChart3, Boxes, CircleHelp, Database, FlaskConical, LayoutDashboard, PanelLeftClose, PanelLeftOpen,
+  Plus, Settings, X} from 'lucide-react'
 import { appConfig, type View } from '../config'
 import { useAppDispatch, useAppSelector } from '../hooks'
-import { setMaximized, setNewExperimentOpen, setSidebarResizing, setSidebarWidth, setView, toggleSidebar } from '../store'
+import { setMaximized, setNewExperimentOpen, setSidebarResizing, setSidebarWidth, setView, toggleSidebar } from '../redux_store/store'
 
 const icons = {
   overview: LayoutDashboard,

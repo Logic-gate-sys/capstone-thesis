@@ -1,7 +1,7 @@
 import { Boxes, Database, FlaskConical, Gauge, Plus } from 'lucide-react'
 import { appConfig } from '../config'
 import { useAppDispatch, useAppSelector } from '../hooks'
-import { setNewExperimentOpen, setView } from '../store'
+import { setNewExperimentOpen, setView } from '../redux_store/store'
 
 const stages = [
   { icon: Database, label: 'Dataset', sub: '686 images', state: 'Ready' },

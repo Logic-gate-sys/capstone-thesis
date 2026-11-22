@@ -1,102 +1,218 @@
-package worker
+package workers
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
 	"sync"
 )
 
-type WorkerEvent struct {
-	Event    string  `json:"event"`
-	JobID    string  `json:"job_id"`
-	Progress float64 `json:"progress,omitempty"`
-	Message  string  `json:"message,omitempty"`
-	Path     string  `json:"path,omitempty"`
-	Status   string  `json:"status,omitempty"`
-}
+type RawEvent map[string]any
+
+type EventHandler func(eventType string, jobID string, payload RawEvent)
 
 type Supervisor struct {
-	cmd     *exec.Cmd
-	stdin   io.WriteCloser
-	mu      sync.Mutex
-	running bool
+	pipelineDir string
+	onEvent     EventHandler
+
+	mu     sync.Mutex
+	cmd    *exec.Cmd
+	stdin  io.WriteCloser
+	stdout io.ReadCloser
+	stderr io.ReadCloser
+	doneCh chan struct{}
 }
 
-func NewSupervisor(pythonEnvPath string) *Supervisor {
-	return &Supervisor{}
+// Supervising worker utilities and jsonl communication in the background needs  it's own struct with methods.
+// When services needs to be spun up, measures must be taken to terminate underlying subprocess when no longer needed.
+// Termination and setting up of subprocesses is synchronised deterministically
+func NewSupervisor(pipelineDir string, onEvent EventHandler) *Supervisor {
+	return &Supervisor{
+		pipelineDir: pipelineDir,
+		onEvent:     onEvent,
+	}
 }
 
-func (s *Supervisor) Start() error {
+// Start: starts worker in the background. Locks sync.Mux for the process to prevent multiple starts of
+// the same instance.
+func (s *Supervisor) Start(ctx context.Context) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	if s.cmd != nil {
+		s.mu.Unlock()
+		return nil
+	}
 
-	// Launch Python worker using uv inside your pipeline directory
-	s.cmd = exec.Command("uv", "run", "python", "-m", "ml_workbench_core.worker")
+	// start the long live python worker process in the background
+	cmd := exec.CommandContext(ctx, "uv", "run", "--no-sync", "python", "src/main.py")
+	cmd.Dir = s.pipelineDir // where python worker is located
 
-	stdinPipe, err := s.cmd.StdinPipe()
+	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		return err
+		s.mu.Unlock()
+		return fmt.Errorf("stdin pipe: %w", err)
 	}
-	s.stdin = stdinPipe
 
-	stdoutPipe, err := s.cmd.StdoutPipe()
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return err
+		s.mu.Unlock()
+		return fmt.Errorf("stdout pipe: %w", err)
 	}
 
-	// Read stdout asynchronously line by line
-	scanner := bufio.NewScanner(stdoutPipe)
-	go func() {
-		for scanner.Scan() {
-			line := scanner.Text()
-			var event WorkerEvent
-			if err := json.Unmarshal([]byte(line), &event); err == nil {
-				// TODO: Forward event to Wails event bus -> Redux UI
-				fmt.Printf("[Worker Event] Job: %s, Event: %s, Msg: %s\n", event.JobID, event.Event, event.Message)
-			}
-		}
-	}()
-
-	if err := s.cmd.Start(); err != nil {
-		return err
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		s.mu.Unlock()
+		return fmt.Errorf("stderr pipe: %w", err)
 	}
 
-	s.running = true
+	if err := cmd.Start(); err != nil {
+		s.mu.Unlock()
+		return fmt.Errorf("start uv worker: %w", err)
+	}
+
+	doneCh := make(chan struct{})
+	s.cmd = cmd
+	s.stdin = stdin
+	s.stdout = stdout
+	s.stderr = stderr
+	s.doneCh = doneCh
+	s.mu.Unlock()
+
+	// Routines to read stdout & stderr respectively
+	go s.readStdout(stdout, doneCh)
+	go s.drainStderr(stderr)
+
 	return nil
 }
 
-func (s *Supervisor) SendJob(jobID string, action string, config map[string]interface{}) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	jobPayload := map[string]interface{}{
+// Sends job to be passed down stdin to  the underlying worker processs/thread
+// Job sent to the stdin of the worker process is picked and process by the worker thread in the background
+func (s *Supervisor) SendJob(jobID string, action string, config map[string]any) error {
+	msg := map[string]any{
 		"job_id": jobID,
 		"action": action,
 		"config": config,
 	}
 
-	data, err := json.Marshal(jobPayload)
+	// json encode job to be passed down the stdin of the worker thread
+	encoded, err := json.Marshal(msg)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal job: %w", err)
+	}
+	encoded = append(encoded, '\n')
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// verify worker is running  & send job via stdin
+	if s.cmd == nil || s.stdin == nil {
+		return errors.New("worker is not running")
 	}
 
-	_, err = s.stdin.Write(append(data, '\n'))
-	return err
+	if _, err := s.stdin.Write(encoded); err != nil {
+		return fmt.Errorf("write to worker stdin: %w", err)
+	}
+	return nil
 }
 
 func (s *Supervisor) Stop() error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	cmd := s.cmd
+	stdin := s.stdin
+	doneCh := s.doneCh
+	s.cmd = nil
+	s.stdin = nil
+	s.doneCh = nil
+	s.mu.Unlock()
 
-	if s.stdin != nil {
-		s.stdin.Close()
+	if cmd == nil {
+		return nil
 	}
-	if s.cmd != nil && s.cmd.Process != nil {
-		return s.cmd.Process.Kill()
+
+	if stdin != nil {
+		_ = stdin.Close()
 	}
-	s.running = false
+
+	if doneCh != nil {
+		<-doneCh
+	}
+
+	if err := cmd.Wait(); err != nil {
+		var exitErr *exec.ExitError
+		if !errors.As(err, &exitErr) {
+			return err
+		}
+	}
 	return nil
+}
+
+func (s *Supervisor) readStdout(stdout io.ReadCloser, doneCh chan struct{}) {
+	defer close(doneCh)
+	defer stdout.Close()
+
+	scanner := bufio.NewScanner(stdout)
+	// create a read buffer of size 4MiB, storing bytes each of size 64kiB
+	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
+
+	// Read stdout lines into each 64Kib chunk of the slice in the buffer,
+	// Decode lines into json
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+
+		var payload RawEvent
+		if err := json.Unmarshal(line, &payload); err != nil {
+			if s.onEvent != nil {
+				s.onEvent("error", "unknown", RawEvent{
+					"event":   "error",
+					"job_id":  "unknown",
+					"message": fmt.Sprintf("invalid JSON from worker: %v", err),
+					"raw":     string(line),
+				})
+			}
+			continue
+		}
+
+		eventType, _ := payload["event"].(string)
+		jobID, _ := payload["job_id"].(string)
+		if jobID == "" {
+			jobID = "unknown"
+		}
+
+		if s.onEvent != nil {
+			s.onEvent(eventType, jobID, payload)
+		}
+	}
+	if scanner.Err() != nil {
+		fmt.Println("Failed to open scanner!")
+		return
+	}
+}
+
+func (s *Supervisor) drainStderr(stderr io.ReadCloser) {
+	defer stderr.Close()
+	scanner := bufio.NewScanner(stderr)
+	scanner.Buffer(make([]byte, 32*1024), 1024*1024)
+	for scanner.Scan() {
+		// Surface non-fatal stderr diagnostics as worker log events if needed.
+		text := scanner.Text()
+		if text != "" && s.onEvent != nil {
+			s.onEvent("log", "worker", RawEvent{
+				"event":   "log",
+				"job_id":  "worker",
+				"stream":  "stderr",
+				"message": text,
+			})
+		}
+	}
+
+	if scanner.Err() != nil {
+		fmt.Println("Failed to open scanner!")
+		return
+	}
 }

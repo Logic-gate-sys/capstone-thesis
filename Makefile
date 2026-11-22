@@ -23,3 +23,13 @@ clean: confirm
 ## venv: creates and activate virtual environment with uv
 venv:
 	cd pipeline/ && source .venv/bin/activate 
+
+## test-workers
+test-workers:
+	uv run --project pipeline pytest pipeline/tests/test_model_workflows.py -s
+
+	
+.PHONY: uv-sync
+## uv-sync: syncs uv packages 
+uv-sync:
+	cd pipeline/ && uv sync

@@ -1,0 +1,39 @@
+# Compiled app binaries & build outputs
+app/bin/
+app/frontend/dist/
+app/frontend/node_modules/
+
+# Large model weights & local database artifacts
+artifacts/models/
+artifacts/*.sqlite
+artifacts/*.sqlite-wal
+artifacts/*.sqlite-shm
+artifacts/*.db
+
+# Python / uv environments, caches & build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+!app/build/
+
+# Environment & local secrets
+.env
+.env.*
+!.env.example
+
+# OS & editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json

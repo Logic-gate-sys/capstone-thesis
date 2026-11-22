@@ -7,7 +7,3 @@ export {
     PipelineService,
     WindowService
 };
-
-export type {
-    PipelineEvent
-} from "./models.js";
