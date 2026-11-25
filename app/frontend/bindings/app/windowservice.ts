@@ -11,18 +11,14 @@
 // @ts-ignore: Unused imports
 import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
-export function Close(): $CancellablePromise<void> {
-    return $Call.ByID(3687130319);
-}
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as $models from "./models.js";
 
 export function IsMaximised(): $CancellablePromise<boolean> {
     return $Call.ByID(914905918);
 }
 
-export function Minimise(): $CancellablePromise<void> {
-    return $Call.ByID(147975292);
-}
-
-export function ToggleMaximise(): $CancellablePromise<void> {
-    return $Call.ByID(3549911582);
+export function Toggle(sg: $models.toggleType): $CancellablePromise<void> {
+    return $Call.ByID(2718503041, sg);
 }

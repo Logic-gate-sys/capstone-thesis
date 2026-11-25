@@ -14,6 +14,10 @@ confirm:
 dev:
 	cd app/ && WEBKIT_DISABLE_COMPOSITING_MODE=1 LIBGL_ALWAYS_SOFTWARE=1 wails3 dev
 
+## bindings: generate typescript bindings 
+bindings:
+	cd app/ && wails3 generate bindings -ts
+	
 .PHONY: clean
 ## clean: clean built application binaries
 clean: confirm

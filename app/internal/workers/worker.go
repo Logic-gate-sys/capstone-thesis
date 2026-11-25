@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"app/internal/events"
 	"bufio"
 	"context"
 	"encoding/json"
@@ -12,13 +13,12 @@ import (
 )
 
 type RawEvent map[string]any
-
 type EventHandler func(eventType string, jobID string, payload RawEvent)
 
 type Supervisor struct {
 	pipelineDir string
 	onEvent     EventHandler
-
+	
 	mu     sync.Mutex
 	cmd    *exec.Cmd
 	stdin  io.WriteCloser
@@ -90,23 +90,14 @@ func (s *Supervisor) Start(ctx context.Context) error {
 
 // Sends job to be passed down stdin to  the underlying worker processs/thread
 // Job sent to the stdin of the worker process is picked and process by the worker thread in the background
-func (s *Supervisor) SendJob(jobID string, action string, config map[string]any) error {
-	msg := map[string]any{
-		"job_id": jobID,
-		"action": action,
-		"config": config,
-	}
-
-	// json encode job to be passed down the stdin of the worker thread
-	encoded, err := json.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("marshal job: %w", err)
-	}
-	encoded = append(encoded, '\n')
-
+func (s *Supervisor) SendJob(job events.JobPayload) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
+	encoded, err := json.Marshal(job)
+	if err != nil {
+		return err
+	}
+	encoded = append(encoded, '\n') // append newline because python work reads json line-by-line
 	// verify worker is running  & send job via stdin
 	if s.cmd == nil || s.stdin == nil {
 		return errors.New("worker is not running")
@@ -118,6 +109,7 @@ func (s *Supervisor) SendJob(jobID string, action string, config map[string]any)
 	return nil
 }
 
+// Stops the work and closes the JSONL communication channel.
 func (s *Supervisor) Stop() error {
 	s.mu.Lock()
 	cmd := s.cmd
@@ -131,11 +123,9 @@ func (s *Supervisor) Stop() error {
 	if cmd == nil {
 		return nil
 	}
-
 	if stdin != nil {
 		_ = stdin.Close()
 	}
-
 	if doneCh != nil {
 		<-doneCh
 	}
@@ -216,3 +206,5 @@ func (s *Supervisor) drainStderr(stderr io.ReadCloser) {
 		return
 	}
 }
+
+

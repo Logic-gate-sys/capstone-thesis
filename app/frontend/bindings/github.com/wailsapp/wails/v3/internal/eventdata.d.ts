@@ -8,7 +8,6 @@ import type { Events } from "@wailsio/runtime";
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
-            "time": string;
             "worker:event": { [_ in string]?: any } | null;
         }
     }

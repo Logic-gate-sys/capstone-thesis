@@ -58,11 +58,11 @@ GGUF is the deployment format, not the primary fine-tuning format.
 
 ```mermaid
 flowchart LR
-    UI[React + TypeScript<br/>Tailwind CSS + Redux]
+    UI[React]
     WAILS[Wails 3 bindings]
     GO[Go application layer<br/>Orchestration and process supervision]
     DB[(SQLite<br/>Projects and metadata)]
-    WORKER[Python JSONL worker<br/>Job execution and progress]
+    WORKER[Python JSONL Worker<br/>Job execution and progress]
     ML[Python pipeline core<br/>Datasets, adaptation, evaluation]
     CONVERT[llama.cpp tools<br/>Conversion and Q4/Q8 quantization]
     RUNTIME[llama-server / llama-cli<br/>CPU/GPU inference]

@@ -7,27 +7,27 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as services$0 from "./internal/services/models.js";
+import * as store$0 from "../store/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as application$0 from "../github.com/wailsapp/wails/v3/pkg/application/models.js";
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
-export function Bind(app: application$0.App | null, modelSvc: services$0.ModelService | null): $CancellablePromise<void> {
-    return $Call.ByID(1284835420, app, modelSvc);
+export function Bind(app: application$0.App | null, modelSvc: store$0.ModelStore | null): $CancellablePromise<void> {
+    return $Call.ByID(1559840055, app, modelSvc);
 }
 
 export function EmitWorkerEvent(eventName: string, data: any): $CancellablePromise<void> {
-    return $Call.ByID(4071613794, eventName, data);
+    return $Call.ByID(838854331, eventName, data);
 }
 
-export function ListModels(): $CancellablePromise<services$0.ModelRecord[] | null> {
-    return $Call.ByID(1943419281);
+export function ListModels(): $CancellablePromise<store$0.ModelRecord[] | null> {
+    return $Call.ByID(3097508210);
 }
 
 export function SearchModels(query: string, pipelineTag: string, library: string, limit: number): $CancellablePromise<string> {
-    return $Call.ByID(3366514721, query, pipelineTag, library, limit);
+    return $Call.ByID(2880285806, query, pipelineTag, library, limit);
 }
 
 export function StartModelDownload(repoID: string, revision: string, family: string): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(2651864958, repoID, revision, family);
+    return $Call.ByID(3788011253, repoID, revision, family);
 }

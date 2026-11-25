@@ -12,5 +12,5 @@ export interface ModelRecord {
     "status": string;
 }
 
-export interface ModelService {
+export interface ModelStore {
 }

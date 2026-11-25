@@ -9,8 +9,8 @@ def main():
     Main entry point of all events. Decode json lines sent into Stdin and
     pass line into process_job function. Runs when there's event in the stdin
     """
-    print(json.dumps({"event": "ready", "workflow":"started"}))
-    sys.stdout.flush() #ensure python sends event out 
+    print(json.dumps({"event": "ready", "workflow": "started"}))
+    sys.stdout.flush()  # ensure python sends event out
 
     # Inspect python stdin to send available jobs to be executed
     for line in sys.stdin:
