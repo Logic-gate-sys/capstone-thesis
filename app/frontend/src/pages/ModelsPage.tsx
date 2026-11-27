@@ -3,7 +3,8 @@ import { Boxes, Download, MoreHorizontal, Plus, Search } from 'lucide-react'
 import { Events } from '@wailsio/runtime'
 import { appConfig } from '../config'
 import { PageIntro } from '../components/PageIntro'
-import { ListModels, SearchModels, StartModelDownload } from '../../bindings/app/internal/services/pipelineservice'
+import { ListModels, SearchModels, StartModelDownload } from '../../bindings/app/internal/services/modelservice'
+import { WorkerEvent } from '../../bindings/events'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import { downloadQueued, searchStarted, workerEventReceived, type WorkerEventPayload } from '../redux_store/store'
 
@@ -20,7 +21,8 @@ export function ModelsPage() {
   const [query, setQuery] = useState('Qwen2-VL')
 
   useEffect(() => {
-    const unsubscribe = Events.On('worker:event', (rawEvent) => {
+    const unsubscribe = Events.On(WorkerEvent, (rawEvent) => {
+      console.log("EVENT: ", rawEvent)
       const payload = unwrapWorkerPayload(rawEvent)
       if (payload?.event) {
         dispatch(workerEventReceived(payload))

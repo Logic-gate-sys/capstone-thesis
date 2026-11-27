@@ -5,10 +5,14 @@
 // @ts-ignore: Unused imports
 import type { Events } from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as workers$0 from "../../../../../app/internal/workers/models.js";
+
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
-            "worker:event": { [_ in string]?: any } | null;
+            "worker:event": workers$0.RawEvent;
         }
     }
 }

@@ -10,24 +10,26 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as store$0 from "../store/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+import * as workers$0 from "../workers/models.js";
 
-export function Bind(app: application$0.App | null, modelSvc: store$0.ModelStore | null): $CancellablePromise<void> {
-    return $Call.ByID(1559840055, app, modelSvc);
+export function ApplyWorkerEvent(eventType: string, jobID: string, payload: workers$0.RawEvent): $CancellablePromise<void> {
+    return $Call.ByID(2816989851, eventType, jobID, payload);
 }
 
-export function EmitWorkerEvent(eventName: string, data: any): $CancellablePromise<void> {
-    return $Call.ByID(838854331, eventName, data);
-}
-
+/**
+ * ListModels returns persisted models from SQLite.
+ */
 export function ListModels(): $CancellablePromise<store$0.ModelRecord[] | null> {
-    return $Call.ByID(3097508210);
+    return $Call.ByID(3921859647);
 }
 
 export function SearchModels(query: string, pipelineTag: string, library: string, limit: number): $CancellablePromise<string> {
-    return $Call.ByID(2880285806, query, pipelineTag, library, limit);
+    return $Call.ByID(1532639863, query, pipelineTag, library, limit);
 }
 
+/**
+ * StartModelDownload initializes a model record in SQLite and enqueues a download job.
+ */
 export function StartModelDownload(repoID: string, revision: string, family: string): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(3788011253, repoID, revision, family);
+    return $Call.ByID(2029812292, repoID, revision, family);
 }

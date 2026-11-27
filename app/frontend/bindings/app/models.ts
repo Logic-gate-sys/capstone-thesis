@@ -7,7 +7,7 @@ export enum toggleType {
      */
     $zero = "",
 
-    minimize = "MINIMISE",
-    maximise = "MAXIMISE",
-    close = "CLOSE",
+    Minimize = "minimize",
+    Maximize = "maximize",
+    Close = "close",
 };
