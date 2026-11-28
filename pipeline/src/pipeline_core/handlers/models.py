@@ -1,5 +1,4 @@
 import hashlib
-import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -27,13 +26,17 @@ def handle_search(job_id: str, config: dict[str, Any], emit_fn: Callable[..., No
     library: str | None = config.get("library")
     limit: int = int(config.get("limit", 20))
 
-    emit_fn("progress",job_id,progress=0.1,message=f"Querying Hugging Face Hub (query={query!r}, tag={pipeline_tag!r})...",
+    emit_fn(
+        event_type="progress",
+        job_id=job_id,
+        progress=0.1,
+        message=f"Querying Hugging Face Hub (query={query!r}, tag={pipeline_tag!r})...",
     )
 
     api = HfApi()
     models = api.list_models(
-        search=query if query else None,
-        filter=pipeline_tag if pipeline_tag else None,
+        search=query,
+        filter=pipeline_tag,
         sort="downloads",
         limit=limit,
         full=False,
@@ -44,8 +47,10 @@ def handle_search(job_id: str, config: dict[str, Any], emit_fn: Callable[..., No
             "author": getattr(m, "author", None),
             "downloads": getattr(m, "downloads", 0) or 0,
             "likes": getattr(m, "likes", 0) or 0,
+            "size": getattr(m, "size", 0) or 0,
             "pipeline_tag": getattr(m, "pipeline_tag", None),
             "tags": getattr(m, "tags", []) or [],
+            "library_name": getattr(m, "library_name", "") or library,
             "last_modified": str(m.last_modified)
             if getattr(m, "last_modified", None)
             else None,
@@ -53,12 +58,24 @@ def handle_search(job_id: str, config: dict[str, Any], emit_fn: Callable[..., No
         for m in models
     ]
 
-    emit_fn("progress",job_id,progress=0.9,message=f"Retrieved {len(results)} candidate models.")
-    emit_fn("search_results", job_id, models=results)
-    emit_fn("complete", job_id,status="success",message=f"Search finished with {len(results)} results.")
+    emit_fn(
+        "progress",
+        job_id,
+        progress=0.9,
+        message=f"Retrieved {len(results)} candidate models.",
+    )
+    emit_fn(event_type="search_results", job_id=job_id, models=results)
+    emit_fn(
+        "complete",
+        job_id,
+        status="success",
+        message=f"Search finished with {len(results)} results.",
+    )
 
 
-def handle_download(job_id: str, config: dict[str, Any], emit_fn: Callable[..., None]) -> None:
+def handle_download(
+    job_id: str, config: dict[str, Any], emit_fn: Callable[..., None]
+) -> None:
     """Downloads a Hugging Face model snapshot and records provenance metadata."""
     repo_id: str | None = config.get("repo_id")
     revision: str | None = config.get("revision")
@@ -115,5 +132,7 @@ def handle_download(job_id: str, config: dict[str, Any], emit_fn: Callable[..., 
     )
 
 
-def cancel_download(job_id: str, config: dict[str, Any], emit_fn: Callable[..., None]) -> None:
-  
+def cancel_download(
+    job_id: str, config: dict[str, Any], emit_fn: Callable[..., None]
+) -> None:
+    pass

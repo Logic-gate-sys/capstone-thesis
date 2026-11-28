@@ -62,22 +62,11 @@ func main() {
 	workerCtx, cancelCtx := context.WithCancel(context.Background())
 	defer func() {
 		cancelCtx()
-		if stopErr := worker.Stop(); err != nil {
+		if stopErr := worker.Stop(); stopErr != nil {
 			log.Printf("worker stop message :%v", stopErr)
 		}
 	}()
 
-	if err := worker.Start(workerCtx); err != nil {
-		log.Fatalf("start python worker: %v", err)
-	}
-
-	go services.StreamWorkerEvents(workerCtx, worker.Events(), modelService,
-		func(eventTyp string, data any) {
-			if app != nil {
-				app.Event.Emit(eventTyp, data)
-			}
-		},
-	)
 	// Create a new Wails application by providing the necessary options.
 	// Variables 'Name' and 'Description' are for application metadata.
 	// 'Assets' configures the asset server with the 'FS' variable`assets`` pointing to the frontend files.
@@ -98,11 +87,7 @@ func main() {
 		},
 	})
 
-	// Create a new window with the necessary options.
-	// 'Title' is the title of the window.
-	// 'Mac' options tailor the window when running on macOS.
-	// 'BackgroundColour' is the background colour of the window.
-	// 'URL' is the URL that will be loaded into the webview.
+	// app window 
 	workbenchWindow = app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "ML Workbench",
 		Width:     1000,
@@ -116,6 +101,19 @@ func main() {
 		BackgroundColour: application.NewRGB(6, 7, 15),
 		URL:              "/",
 	})
+
+	if err := worker.Start(workerCtx); err != nil {
+		log.Fatalf("start python worker: %v", err)
+	}
+	// streaming services go routine 
+	go services.StreamWorkerEvents(workerCtx, worker.Events(), modelService,
+		func(eventTyp string, data any) {
+			if app != nil {
+				app.Event.Emit(eventTyp, data)
+			}
+		},
+	)
+	
 	// app starts
 	if err := app.Run(); err != nil {
 		log.Fatal(err)

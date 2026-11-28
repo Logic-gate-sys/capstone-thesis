@@ -111,7 +111,7 @@ func (w *Worker) Start(ctx context.Context) error {
 	go w.writeJobsLoop(ctx, stdin)
 	go w.readStdout(stdout, loopDone)
 	go w.drainStderr(stderr)
-
+  fmt.Println("Worker started...")
 	return nil
 }
 

@@ -4,7 +4,7 @@ import { Events } from '@wailsio/runtime'
 import { appConfig } from '../config'
 import { PageIntro } from '../components/PageIntro'
 import { ListModels, SearchModels, StartModelDownload } from '../../bindings/app/internal/services/modelservice'
-import { WorkerEvent } from '../../bindings/events'
+import { WorkerEvent,  } from '../../bindings/events'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import { downloadQueued, searchStarted, workerEventReceived, type WorkerEventPayload } from '../redux_store/store'
 
@@ -18,7 +18,7 @@ function unwrapWorkerPayload(raw: unknown): WorkerEventPayload | null {
 export function ModelsPage() {
   const dispatch = useAppDispatch()
   const { isSearching, searchResults, searchError, downloadsByJobId } = useAppSelector((state) => state.models)
-  const [query, setQuery] = useState('Qwen2-VL')
+  const [query, setQuery] = useState('Qwen2-VL-1.5B')
 
   useEffect(() => {
     const unsubscribe = Events.On(WorkerEvent, (rawEvent) => {
@@ -37,12 +37,11 @@ export function ModelsPage() {
   }, [dispatch])
 
   const runSearch = async (searchQuery: string) => {
+    //tream query
     const trimmed = searchQuery.trim()
     if (!trimmed) return
     const jobId = await SearchModels(trimmed, '', '', 10)
-    if (jobId) {
-      dispatch(searchStarted({ jobId }))
-    }
+    if (jobId) dispatch(searchStarted({ jobId }));
   }
 
   const handleSearchSubmit = async (e: FormEvent) => {

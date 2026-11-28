@@ -32,7 +32,9 @@ venv:
 test-workers:
 	uv run --project pipeline pytest pipeline/tests/test_model_workflows.py -s
 
-	
+## run-worker: run worker to test functionality
+run-worker:
+	cd pipeline/ && uv run --no-sync python src/main.py
 .PHONY: uv-sync
 ## uv-sync: syncs uv packages 
 uv-sync:

@@ -31,14 +31,13 @@ def process_job(line: str) -> None:
   """
   try:
       job = json.loads(line)
-      print(f"Job: ${job}")
       job_id = job.get("job_id", "unknown")
       action = job.get("action")
       config = job.get("config", {})
 
       handler = ACTION_HANDLERS.get(action)
       if not handler:
-          emit("error", job_id, message=f"Unknown action: {action}")
+          emit(event_type="error", job_id=job_id, message=f"Unknown action: {action}")
           return
 
       # Execute the modular handler, passing emit and job context
@@ -47,4 +46,4 @@ def process_job(line: str) -> None:
   # Catch any errors thrown and sent to stdout
   except Error as e:
       tb = traceback.format_exc()
-      emit("error", job_id="unknown", message=str(e), traceback=tb)
+      emit(event_type="error", job_id="unknown", message=str(e), traceback=tb)
